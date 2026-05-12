@@ -7,7 +7,7 @@ export const initFFmpeg = async () => {
   if (ffmpeg) return ffmpeg;
   ffmpeg = new FFmpeg();
   
-  ffmpeg.on('log', ({ message }) => {
+  ffmpeg.on('log', () => {
     // Only log essential ffmpeg info if needed
     // console.log(message);
   });

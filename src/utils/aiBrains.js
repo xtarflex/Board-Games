@@ -1,5 +1,5 @@
 // Basic Minimax for Connect Four
-export const getBestMoveC4 = (board, player, depth = 5) => {
+export const getBestMoveC4 = (board) => {
   const ROWS = 6;
   const COLS = 7;
   
