@@ -43,11 +43,54 @@ const TicTacToe = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
   }, [board, history, onWin, mode]);
 
   const handleCellClick = useCallback((index) => {
-    if (winner || board[index] !== 0 || isAiThinking) return;
+    if (winner || board[index] !== 0 || isAiThinking || mode === 'tutorial') return;
     if (mode === 'PvAI' && currentPlayer !== 1) return;
 
     makeMove(index, currentPlayer);
   }, [board, winner, currentPlayer, isAiThinking, makeMove, mode]);
+
+
+  // Tutorial Logic
+  useEffect(() => {
+    if (mode !== 'tutorial') return;
+
+    const tutorialMoves = [
+      { index: 4, player: 1 }, // Center
+      { index: 0, player: 2 }, // Top Left
+      { index: 2, player: 1 }, // Top Right
+      { index: 6, player: 2 }, // Bottom Left
+      { index: 5, player: 1 }, // Middle Right
+      { index: 8, player: 2 }, // Bottom Right (block)
+      { index: 3, player: 1 }, // Middle Left WIN
+    ];
+
+    let moveIndex = 0;
+
+    const playNextMove = () => {
+      if (moveIndex >= tutorialMoves.length) return;
+      const move = tutorialMoves[moveIndex];
+
+      setBoard(prev => {
+         const nb = [...prev];
+         nb[move.index] = move.player;
+         if (checkWinTTT(nb, move.player)) {
+            setWinner(move.player);
+         } else {
+            setCurrentPlayer(move.player === 1 ? 2 : 1);
+         }
+         return nb;
+      });
+
+      moveIndex++;
+      if (moveIndex < tutorialMoves.length) {
+         timer = setTimeout(playNextMove, 1200);
+      }
+    };
+
+    let timer = setTimeout(playNextMove, 1000);
+    return () => clearTimeout(timer);
+
+  }, [mode]);
 
   useEffect(() => {
     let thinkingTimer;
@@ -121,6 +164,7 @@ const TicTacToe = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
           </h2>
         ) : (
           <div className="flex items-center gap-4">
+            {mode === 'tutorial' && <span className="absolute -top-12 px-4 py-1 rounded-full bg-amber-500 text-obsidian-900 font-black text-xs uppercase tracking-widest shadow-[0_0_15px_-3px_rgba(251,191,36,0.6)]">TUTORIAL MODE</span>}
             <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 1 ? 'bg-indigo-600 shadow-neon-indigo' : 'text-slate-500'}`}>P1 (X)</span>
             <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 2 ? 'bg-rose-600 shadow-neon-rose' : 'text-slate-500'}`}>
               {mode === 'PvAI' ? 'AI (O)' : 'P2 (O)'}

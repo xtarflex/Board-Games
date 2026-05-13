@@ -12,6 +12,43 @@ const Mancala = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
   const [history, setHistory] = useState([]);
   const [isAiThinking, setIsAiThinking] = useState(false);
 
+
+  // Tutorial Logic
+  useEffect(() => {
+    if (mode !== 'tutorial') return;
+
+    const tutorialMoves = [
+      { index: 2, player: 1 }, // Lands in store -> Extra Turn
+      { index: 5, player: 1 }, // Normal move
+      { index: 8, player: 2 }, // Normal move
+      { index: 1, player: 1 }, // Lands in empty pit 5 -> Capture 7
+    ];
+
+    let moveIndex = 0;
+
+    const playNextMove = () => {
+      if (moveIndex >= tutorialMoves.length) {
+         setWinner('draw');
+         return;
+      }
+      const move = tutorialMoves[moveIndex];
+
+      setBoard(prev => {
+         const { newBoard, extraTurn } = applyMoveMancala(prev, move.index, move.player);
+         if (!extraTurn) {
+            setCurrentPlayer(move.player === 1 ? 2 : 1);
+         }
+         return newBoard;
+      });
+
+      moveIndex++;
+      timer = setTimeout(playNextMove, 1800);
+    };
+
+    let timer = setTimeout(playNextMove, 1500);
+    return () => clearTimeout(timer);
+  }, [mode]);
+
   const handleGameOver = useCallback((finalBoard) => {
     const p1Score = finalBoard[6];
     const p2Score = finalBoard[13];
@@ -44,7 +81,7 @@ const Mancala = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
   }, [board, history, handleGameOver]);
 
   const handlePitClick = useCallback((index) => {
-    if (winner || isAiThinking) return;
+    if (winner || isAiThinking || mode === 'tutorial') return;
     if (mode === 'PvAI' && currentPlayer !== 1) return;
 
     if (currentPlayer === 1 && (index < 0 || index > 5)) return;
@@ -104,6 +141,7 @@ const Mancala = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
           </h2>
         ) : (
           <div className="flex items-center gap-4">
+            {mode === 'tutorial' && <span className="absolute -top-12 px-4 py-1 rounded-full bg-amber-500 text-obsidian-900 font-black text-xs uppercase tracking-widest shadow-[0_0_15px_-3px_rgba(251,191,36,0.6)]">TUTORIAL MODE</span>}
             <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 1 ? 'bg-indigo-600 shadow-neon-indigo' : 'text-slate-500'}`}>P1 TURN</span>
             <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 2 ? 'bg-amber-600 shadow-[0_0_20px_-5px_rgba(245,158,11,0.4)]' : 'text-slate-500'}`}>
               {mode === 'PvAI' ? 'AI TURN' : 'P2 TURN'}

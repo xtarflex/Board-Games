@@ -60,3 +60,24 @@ export const getUserProfile = async () => {
   const db = await initDB();
   return db.get('user_profile', 'main_user');
 };
+
+export const hasSeenTutorial = async (gameType) => {
+  const profile = await getUserProfile();
+  if (!profile || !profile.tutorialsSeen) return false;
+  return !!profile.tutorialsSeen[gameType];
+};
+
+export const markTutorialSeen = async (gameType) => {
+  const db = await initDB();
+  const tx = db.transaction('user_profile', 'readwrite');
+  const store = tx.objectStore('user_profile');
+  const existing = await store.get('main_user') || {};
+  const tutorialsSeen = existing.tutorialsSeen || {};
+  tutorialsSeen[gameType] = true;
+  await store.put({
+    id: 'main_user',
+    ...existing,
+    tutorialsSeen
+  });
+  await tx.done;
+};

@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Play, Users, Trophy, History, ArrowLeft, Gamepad2 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Play, Users, Trophy, History, ArrowLeft, Gamepad2, Lightbulb, X } from 'lucide-react'
 import Header from './components/Hub/Header'
 import ConnectFour from './components/Engines/ConnectFour'
 import TicTacToe from './components/Engines/TicTacToe'
 import Othello from './components/Engines/Othello'
 import Mancala from './components/Engines/Mancala'
 import Morris from './components/Engines/Morris'
-import { getMatchesByType } from './utils/persistence.js'
+import { getMatchesByType, hasSeenTutorial, markTutorialSeen } from './utils/persistence.js'
 import './App.css'
 
 function App() {
@@ -19,6 +19,7 @@ function App() {
   const [importedGameInfo, setImportedGameInfo] = useState(null)
   const [showLobby, setShowLobby] = useState(null) // gameId like 'C4'
   const [lobbyMatches, setLobbyMatches] = useState([])
+  const [showTutorialPrompt, setShowTutorialPrompt] = useState(false)
 
   const games = [
     { id: 'C4', title: 'Connect Four', desc: 'Vertical gravity-based alignment.', color: 'indigo' },
@@ -44,6 +45,23 @@ function App() {
     setActiveGame(null)
     const matches = await getMatchesByType(gameId)
     setLobbyMatches(matches)
+
+    const seen = await hasSeenTutorial(gameId)
+    if (!seen) {
+      setShowTutorialPrompt(true)
+    }
+  }
+
+  const startTutorial = async () => {
+    await markTutorialSeen(showLobby);
+    setShowTutorialPrompt(false);
+    setGameMode('tutorial');
+    setActiveGame(showLobby);
+  }
+
+  const dismissTutorial = async () => {
+    await markTutorialSeen(showLobby);
+    setShowTutorialPrompt(false);
   }
 
   const startGame = (mode) => {
@@ -125,7 +143,17 @@ function App() {
             </button>
 
             <div className="glass-panel p-8 rounded-[3rem] border border-indigo-500/20 shadow-deep mb-8">
-              <h2 className="text-4xl font-black mb-8">{games.find(g => g.id === showLobby)?.title} LOBBY</h2>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-4xl font-black">{games.find(g => g.id === showLobby)?.title} LOBBY</h2>
+                <button
+                  onClick={() => startTutorial()}
+                  className="flex items-center gap-2 px-4 py-2 bg-obsidian-800 hover:bg-obsidian-700 border border-white/10 rounded-xl transition-colors text-amber-400 group"
+                  title="How to Play"
+                >
+                  <Lightbulb className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  <span className="hidden sm:inline font-bold">How to Play</span>
+                </button>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <button
@@ -177,6 +205,49 @@ function App() {
             </div>
           </motion.div>
         )}
+
+        {/* Tutorial Prompt Modal */}
+        <AnimatePresence>
+          {showTutorialPrompt && showLobby && !activeGame && (
+             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-900/90 backdrop-blur-md">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="bg-obsidian-800 border border-amber-500/30 p-8 rounded-3xl w-full max-w-lg shadow-[0_0_50px_-12px_rgba(251,191,36,0.25)] relative text-center"
+                >
+                  <button
+                    onClick={dismissTutorial}
+                    className="absolute top-4 right-4 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                  <div className="w-16 h-16 rounded-2xl bg-amber-500/20 flex items-center justify-center mx-auto mb-6">
+                    <Lightbulb className="w-8 h-8 text-amber-400" />
+                  </div>
+                  <h2 className="text-3xl font-black mb-4 text-white">First Time Playing?</h2>
+                  <p className="text-slate-400 mb-8 leading-relaxed">
+                    Would you like to watch a quick, automated demonstration of the rules and mechanics for <strong>{games.find(g => g.id === showLobby)?.title}</strong>?
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-4">
+                     <button
+                       onClick={dismissTutorial}
+                       className="flex-1 py-3 px-4 bg-obsidian-900 hover:bg-obsidian-700 border border-white/10 rounded-xl font-bold transition-all text-slate-300"
+                     >
+                       Skip for now
+                     </button>
+                     <button
+                       onClick={startTutorial}
+                       className="flex-1 py-3 px-4 bg-amber-500 hover:bg-amber-400 rounded-xl font-bold transition-all text-obsidian-900 shadow-[0_0_20px_-5px_rgba(251,191,36,0.6)]"
+                     >
+                       Watch Tutorial
+                     </button>
+                  </div>
+                </motion.div>
+             </div>
+          )}
+        </AnimatePresence>
 
         {/* Game Engines */}
         {activeGame === 'C4' && (

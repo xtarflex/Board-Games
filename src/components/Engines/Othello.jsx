@@ -28,6 +28,42 @@ const Othello = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
     }, 0);
   }, [board, currentPlayer]);
 
+
+  // Tutorial Logic
+  useEffect(() => {
+    if (mode !== 'tutorial') return;
+
+    // Demonstrate basic flips
+    const tutorialMoves = [
+      { r: 2, c: 3, player: 1 },
+      { r: 2, c: 2, player: 2 },
+      { r: 3, c: 2, player: 1 },
+      { r: 4, c: 2, player: 2 },
+    ];
+
+    let moveIndex = 0;
+
+    const playNextMove = () => {
+      if (moveIndex >= tutorialMoves.length) {
+         setWinner('draw'); // Just end tutorial
+         return;
+      }
+      const move = tutorialMoves[moveIndex];
+
+      setBoard(prev => {
+         const nb = applyMoveOthello(prev, move.r, move.c, move.player);
+         setCurrentPlayer(move.player === 1 ? 2 : 1);
+         return nb;
+      });
+
+      moveIndex++;
+      timer = setTimeout(playNextMove, 1500);
+    };
+
+    let timer = setTimeout(playNextMove, 1500);
+    return () => clearTimeout(timer);
+  }, [mode]);
+
   const handleGameOver = useCallback((finalBoard) => {
     const { p1, p2 } = getOthelloScore(finalBoard);
     let winRes = p1 > p2 ? 1 : p2 > p1 ? 2 : 'draw';
@@ -67,7 +103,7 @@ const Othello = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
   }, [board, history, handleGameOver]);
 
   const handleCellClick = useCallback((r, c) => {
-    if (winner || isAiThinking) return;
+    if (winner || isAiThinking || mode === 'tutorial') return;
     if (mode === 'PvAI' && currentPlayer !== 1) return;
     if (!validMoves.some(m => m.r === r && m.c === c)) return;
 
@@ -112,6 +148,7 @@ const Othello = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
           </h2>
         ) : (
           <div className="flex items-center gap-4">
+            {mode === 'tutorial' && <span className="absolute -top-12 px-4 py-1 rounded-full bg-amber-500 text-obsidian-900 font-black text-xs uppercase tracking-widest shadow-[0_0_15px_-3px_rgba(251,191,36,0.6)]">TUTORIAL MODE</span>}
             <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 1 ? 'bg-indigo-600 shadow-neon-indigo' : 'text-slate-500'}`}>P1 TURN</span>
             <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 2 ? 'bg-emerald-600 shadow-[0_0_20px_-5px_rgba(16,185,129,0.4)]' : 'text-slate-500'}`}>
               {mode === 'PvAI' ? 'AI TURN' : 'P2 TURN'}

@@ -56,7 +56,7 @@ const ConnectFour = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
   }, [board, history, onWin, mode]);
 
   const handleColumnClick = useCallback((colIndex) => {
-    if (winner || isAiThinking) return;
+    if (winner || isAiThinking || mode === 'tutorial') return;
     if (mode === 'PvAI' && currentPlayer !== 1) return; // Prevent clicking during AI turn
 
     const rowIndex = getLowestEmptyRow(board, colIndex);
@@ -64,6 +64,65 @@ const ConnectFour = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
 
     makeMove(rowIndex, colIndex, currentPlayer);
   }, [board, winner, currentPlayer, isAiThinking, makeMove, mode]);
+
+
+  // Tutorial Logic
+  useEffect(() => {
+    if (mode !== 'tutorial') return;
+
+    // Predetermined moves for Connect Four win demonstration
+    const tutorialMoves = [
+      { col: 3, player: 1 }, // P1 Center
+      { col: 4, player: 2 }, // P2 Right
+      { col: 3, player: 1 }, // P1 Center (stack)
+      { col: 4, player: 2 }, // P2 Right (stack)
+      { col: 3, player: 1 }, // P1 Center (stack)
+      { col: 2, player: 2 }, // P2 block bottom left
+      { col: 3, player: 1 }, // P1 Center WIN
+    ];
+
+    let moveIndex = 0;
+
+    const playNextMove = () => {
+      if (moveIndex >= tutorialMoves.length) return;
+      const move = tutorialMoves[moveIndex];
+
+      // we need to access the latest board state via the functional state update,
+      // but since makeMove handles the logic perfectly, we'll just trigger it.
+      // However, makeMove uses the `board` dependency which could be stale in this timeout.
+      // Let's use a trick: we simulate the exact clicks with delays.
+
+      setBoard(prevBoard => {
+         const newBoard = prevBoard.map(row => [...row]);
+         // Find lowest empty
+         let rowIndex = -1;
+         for (let r = ROWS - 1; r >= 0; r--) {
+           if (newBoard[r][move.col] === 0) { rowIndex = r; break; }
+         }
+
+         if(rowIndex !== -1) {
+            newBoard[rowIndex][move.col] = move.player;
+
+            // Check win inside here to avoid async state issues during tutorial
+            if (checkWinC4(newBoard, move.player)) {
+               setWinner(move.player);
+            } else {
+               setCurrentPlayer(move.player === 1 ? 2 : 1);
+            }
+         }
+         return newBoard;
+      });
+
+      moveIndex++;
+      if (moveIndex < tutorialMoves.length) {
+         timer = setTimeout(playNextMove, 1200);
+      }
+    };
+
+    let timer = setTimeout(playNextMove, 1000);
+    return () => clearTimeout(timer);
+
+  }, [mode]);
 
   // AI Turn Logic
   useEffect(() => {
@@ -108,6 +167,7 @@ const ConnectFour = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
           </h2>
         ) : (
           <div className="flex items-center gap-4">
+            {mode === 'tutorial' && <span className="absolute -top-12 px-4 py-1 rounded-full bg-amber-500 text-obsidian-900 font-black text-xs uppercase tracking-widest shadow-[0_0_15px_-3px_rgba(251,191,36,0.6)]">TUTORIAL MODE</span>}
             <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 1 ? 'bg-indigo-600 shadow-neon-indigo' : 'text-slate-500'}`}>P1 TURN</span>
             <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 2 ? 'bg-rose-600 shadow-neon-rose' : 'text-slate-500'}`}>
               {mode === 'PvAI' ? 'AI TURN' : 'P2 TURN'}

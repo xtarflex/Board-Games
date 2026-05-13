@@ -16,6 +16,60 @@ const Morris = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
   const [p2Pieces, setP2Pieces] = useState(3);
   const [selectedNode, setSelectedNode] = useState(null);
 
+
+  // Tutorial Logic
+  useEffect(() => {
+    if (mode !== 'tutorial') return;
+
+    const validTutorialMoves = [
+      { start: null, end: 4, player: 1, phase: 'placement' }, // Center
+      { start: null, end: 0, player: 2, phase: 'placement' }, // Top left
+      { start: null, end: 1, player: 1, phase: 'placement' }, // Top mid
+      { start: null, end: 2, player: 2, phase: 'placement' }, // Top right
+      { start: null, end: 6, player: 1, phase: 'placement' }, // Bot left
+      { start: null, end: 8, player: 2, phase: 'placement' }, // Bot right
+
+      { start: 6, end: 3, player: 1, phase: 'movement' },     // Bot left -> Mid left
+      { start: 8, end: 5, player: 2, phase: 'movement' },     // Bot right -> Mid right
+      { start: 3, end: 7, player: 1, phase: 'movement' },     // Mid left -> Bot mid (1,4,7 MILL!)
+    ];
+
+    let moveIndex = 0;
+
+    const playNextMove = () => {
+      if (moveIndex >= validTutorialMoves.length) {
+         setWinner(1);
+         return;
+      }
+      const move = validTutorialMoves[moveIndex];
+
+      setBoard(prev => {
+         const nb = [...prev];
+         if (move.start !== null) nb[move.start] = 0;
+         nb[move.end] = move.player;
+
+         if (move.phase === 'placement') {
+            if (move.player === 1) setP1Pieces(p => p - 1);
+            else setP2Pieces(p => p - 1);
+         }
+
+         if (checkWinMorris(nb)) {
+            setWinner(move.player);
+         } else {
+            setCurrentPlayer(move.player === 1 ? 2 : 1);
+         }
+         return nb;
+      });
+
+      setPhase(move.phase);
+      moveIndex++;
+      timer = setTimeout(playNextMove, 1500);
+    };
+
+    let timer = setTimeout(playNextMove, 1000);
+    return () => clearTimeout(timer);
+  }, [mode]);
+
   const makeMove = useCallback((startNode, endNode, player) => {
     const newBoard = [...board];
     let isPlacement = false;
@@ -57,7 +111,7 @@ const Morris = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
   }, [board, history, onWin, mode, p1Pieces, p2Pieces]);
 
   const handleNodeClick = useCallback((index) => {
-    if (winner || isAiThinking) return;
+    if (winner || isAiThinking || mode === 'tutorial') return;
     if (mode === 'PvAI' && currentPlayer !== 1) return;
 
     if (phase === 'placement') {
@@ -137,6 +191,7 @@ const Morris = ({ onWin, mode = 'PvAI', isScrubbing = false }) => {
         ) : (
           <div className="flex flex-col gap-2 items-center">
              <div className="flex items-center gap-4">
+              {mode === 'tutorial' && <span className="absolute -top-16 px-4 py-1 rounded-full bg-amber-500 text-obsidian-900 font-black text-xs uppercase tracking-widest shadow-[0_0_15px_-3px_rgba(251,191,36,0.6)]">TUTORIAL MODE</span>}
               <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 1 ? 'bg-indigo-600 shadow-neon-indigo' : 'text-slate-500'}`}>P1 TURN</span>
               <span className={`px-4 py-2 rounded-xl font-bold transition-colors ${currentPlayer === 2 ? 'bg-cyan-600 shadow-[0_0_20px_-5px_rgba(34,211,238,0.4)]' : 'text-slate-500'}`}>
                 {mode === 'PvAI' ? 'AI TURN' : 'P2 TURN'}
